@@ -1,0 +1,39 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Model files
+model/*.pt
+model/*.pth
+model/*.weights
+model/*.onnx
+
+# Static files
+static/uploads/*
+static/detected/*
+!static/uploads/.gitkeep
+!static/detected/.gitkeep
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.local 
