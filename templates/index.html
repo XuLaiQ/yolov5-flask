@@ -378,12 +378,30 @@
                     throw new Error(data.error || '加载模型信息失败');
                 }
                 
-                modelStatus.textContent = data.status;
+                let classes = [];
+                let status = '已加载';
+                
+                // 处理不同来源的数据格式
+                if (data.source === 'database' && data.model_info) {
+                    // 从数据库获取的详细信息
+                    classes = data.model_info.classes || [];
+                    status = '已加载 (数据库)';
+                } else if (data.source === 'runtime') {
+                    // 从运行时获取的基本信息
+                    classes = data.classes || [];
+                    status = data.status || '已加载';
+                } else {
+                    // 兼容旧格式
+                    classes = data.classes || [];
+                    status = data.status || '已加载';
+                }
+                
+                modelStatus.textContent = status;
                 modelStatus.className = 'badge bg-success';
                 
                 // 显示类别标签
-                if (Array.isArray(data.classes) && data.classes.length > 0) {
-                    modelClasses.innerHTML = data.classes
+                if (Array.isArray(classes) && classes.length > 0) {
+                    modelClasses.innerHTML = classes
                         .map(cls => `<span class="class-tag">${cls}</span>`)
                         .join('');
                 } else {
@@ -409,16 +427,33 @@
                 const response = await fetch('/models');
                 const data = await response.json();
                 
-                if (!data.models || !Array.isArray(data.models) || data.models.length === 0) {
+                if (!data.success || !data.models || !Array.isArray(data.models) || data.models.length === 0) {
                     throw new Error('没有可用的模型');
                 }
                 
-                modelSelect.innerHTML = data.models
-                    .map(model => `<option value="${model}">${model}</option>`)
-                    .join('');
+                // 处理不同格式的模型数据
+                let modelOptions;
+                if (data.source === 'database') {
+                    // 数据库返回的是对象数组，包含详细信息
+                    modelOptions = data.models.map(model => {
+                        const modelName = model.model_name;
+                        const description = model.description || modelName;
+                        return `<option value="${modelName}" title="${description}">${modelName}</option>`;
+                    });
+                } else {
+                    // 文件系统返回的是对象数组，但只有model_name字段
+                    modelOptions = data.models.map(model => {
+                        const modelName = typeof model === 'string' ? model : model.model_name;
+                        return `<option value="${modelName}">${modelName}</option>`;
+                    });
+                }
+                
+                modelSelect.innerHTML = modelOptions.join('');
                     
                 // 加载当前选中模型的信息
-                await loadModelInfo(modelSelect.value);
+                if (modelSelect.value) {
+                    await loadModelInfo(modelSelect.value);
+                }
             } catch (error) {
                 console.error('加载模型列表失败:', error);
                 modelSelect.innerHTML = '<option value="">加载失败</option>';
@@ -520,4 +555,4 @@
         loadModels();
     </script>
 </body>
-</html> 
+</html>

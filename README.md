@@ -1,334 +1,360 @@
-# YOLOv5 火灾检测系统
+# YOLOv5 目标检测系统
 
-这是一个基于YOLOv5和Flask的火灾检测Web应用系统。该系统能够通过上传图片来检测图片中是否存在火灾情况。
+这是一个基于YOLOv5和Flask的智能目标检测Web应用系统。该系统支持多模型切换、实时图像检测、数据库存储和检测历史管理等功能，主要用于火灾检测，同时支持扩展到其他目标检测任务。
 
 ## 项目结构
 
 ```
 yolov5-flask/
-├── app.log                 # 应用日志文件
+├── .gitignore              # Git忽略文件配置
+├── README.md               # 项目说明文档
 ├── main.py                 # 主应用程序
+├── app.log                 # 应用日志文件
+├── requirements.txt        # 项目依赖
+├── database_init.py        # 数据库初始化脚本
+├── database_schema.sql     # 数据库结构设计
+├── database_utils.py       # 数据库工具函数
+├── gunicorn_config.py      # Gunicorn配置文件
 ├── model/                  # 模型目录
 │   └── fires.pt           # 训练好的火灾检测模型
-├── requirements.txt        # 项目依赖
-├── static/                 # 静态资源目录
-│   ├── detected/          # 检测后的图片存储目录
-│   └── uploads/           # 上传图片存储目录
-├── templates/             # 模板目录
+├── templates/             # 前端模板目录
 │   └── index.html        # 主页面模板
 └── yolov5-master/        # YOLOv5源代码
+    ├── models/           # YOLOv5模型定义
+    └── utils/            # YOLOv5工具函数
 ```
 
 ## 技术栈
 
-- Python 3.x
-- Flask 3.0.2
-- PyTorch
-- YOLOv5
-- OpenCV
-- Pillow
-- Waitress (生产环境服务器)
+### 后端技术
+- **Python 3.x** - 主要开发语言
+- **Flask 3.0.2** - Web框架
+- **PyTorch 2.2.0** - 深度学习框架
+- **YOLOv5** - 目标检测模型
+- **Waitress 3.0.0** - WSGI服务器
 
-## 实现流程
+### 数据库
+- **MongoDB** - 主数据库（图片存储、检测记录）
+- **PyMongo 4.0+** - MongoDB Python驱动
 
-### 1. 系统初始化
+### 图像处理
+- **OpenCV** - 图像处理库
+- **Pillow** - 图像操作库
+- **NumPy** - 数值计算库
 
-#### 1.1 配置日志系统
-```python
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('app.log')
-    ]
-)
-logger = logging.getLogger(__name__)
+### 前端技术
+- **HTML5/CSS3** - 页面结构和样式
+- **JavaScript (ES6+)** - 前端交互逻辑
+- **Bootstrap风格** - 响应式UI设计
+
+### 开发工具
+- **python-dotenv** - 环境变量管理
+- **Werkzeug** - WSGI工具库
+
+## 核心功能特性
+
+### 🎯 智能检测功能
+- **多模型支持**: 支持动态切换不同的YOLOv5模型
+- **实时检测**: 上传图片后实时进行目标检测
+- **高精度识别**: 基于YOLOv5的高精度目标检测算法
+- **置信度显示**: 显示每个检测目标的置信度分数
+- **边界框标注**: 自动在检测结果上绘制边界框和标签
+
+### 💾 数据管理功能
+- **图片存储**: 原始图片和检测结果图片存储在MongoDB中
+- **检测记录**: 完整的检测历史记录和统计信息
+- **模型管理**: 自动注册和管理多个检测模型
+- **数据统计**: 检测次数、成功率、处理时间等统计分析
+
+### 🌐 Web界面功能
+- **响应式设计**: 支持桌面和移动设备访问
+- **拖拽上传**: 支持拖拽文件上传和点击上传
+- **实时预览**: 原始图片和检测结果的对比显示
+- **模型切换**: 前端动态选择和切换检测模型
+- **加载动画**: 优雅的加载状态提示
+
+### 🔧 系统管理功能
+- **健康检查**: 系统状态监控API
+- **日志记录**: 详细的操作日志和错误追踪
+- **环境配置**: 通过环境变量灵活配置系统参数
+- **自动容错**: 端口占用检测和自动切换
+
+### 📊 API接口功能
+- **RESTful API**: 标准的REST API设计
+- **图片检测API**: `/detect` - 图片上传和检测
+- **模型信息API**: `/models`, `/model-info` - 模型管理
+- **历史记录API**: `/detection-history` - 检测历史查询
+- **统计信息API**: `/detection-statistics` - 数据统计分析
+- **图片服务API**: `/image/<id>` - 图片数据获取
+
+## 系统架构设计
+
+### 1. 整体架构
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   前端界面      │    │   Flask后端     │    │   MongoDB数据库 │
+│                 │    │                 │    │                 │
+│ • HTML/CSS/JS   │◄──►│ • REST API      │◄──►│ • 图片存储      │
+│ • 响应式设计    │    │ • 业务逻辑      │    │ • 检测记录      │
+│ • 文件上传      │    │ • 模型管理      │    │ • 统计数据      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │   YOLOv5模型    │
+                       │                 │
+                       │ • 目标检测      │
+                       │ • 图像处理      │
+                       │ • 结果标注      │
+                       └─────────────────┘
 ```
 
-#### 1.2 设置项目路径
-```python
-# 设置项目根目录
-FILE = Path(__file__).resolve()
-ROOT = FILE.parent
+### 2. 核心组件
 
-# YOLOv5路径设置
-YOLOV5_PATH = ROOT / 'yolov5-master'
-if str(YOLOV5_PATH) not in sys.path:
-    sys.path.append(str(YOLOV5_PATH))
+#### 2.1 数据库设计
+- **DetectionDatabase类**: 统一的数据库操作接口
+- **图片存储**: 二进制数据直接存储在MongoDB中
+- **检测记录**: 完整的检测历史和元数据
+- **模型管理**: 自动注册和版本管理
+- **统计分析**: 实时数据统计和性能监控
+
+#### 2.2 模型管理系统
+- **动态加载**: 支持运行时切换不同模型
+- **自动注册**: 启动时自动扫描并注册模型文件
+- **版本管理**: 模型版本信息和元数据管理
+- **性能监控**: 模型推理时间和准确率统计
+
+#### 2.3 图像处理流水线
+- **预处理**: 图像尺寸标准化和格式转换
+- **推理**: YOLOv5模型目标检测
+- **后处理**: 非极大值抑制和结果过滤
+- **可视化**: 边界框绘制和标签标注
+
+### 3. API接口设计
+
+#### 3.1 核心检测接口
+```
+POST /detect
+- 功能: 图片上传和目标检测
+- 参数: file (图片文件), model (模型名称)
+- 返回: 检测结果、图片URL、统计信息
 ```
 
-#### 1.3 初始化Flask应用
-```python
-app = Flask(__name__)
-
-# 配置文件存储路径
-UPLOAD_FOLDER = Path('static/uploads')  # 原始图片存储路径
-DETECTED_FOLDER = Path('static/detected')  # 检测后图片存储路径
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-
-app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
-app.config['DETECTED_FOLDER'] = str(DETECTED_FOLDER)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 限制上传文件大小为16MB
-
-# 确保上传目录存在
-UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
-DETECTED_FOLDER.mkdir(parents=True, exist_ok=True)
+#### 3.2 模型管理接口
+```
+GET /models              # 获取可用模型列表
+GET /model-info          # 获取模型详细信息
+POST /models/register    # 注册新模型到数据库
 ```
 
-### 2. 模型管理
-
-#### 2.1 模型加载
-```python
-def load_model():
-    """加载YOLOv5模型"""
-    global model
-    model_path = ROOT / 'model' / 'fires.pt'
-    if not model_path.exists():
-        raise FileNotFoundError(f"模型文件不存在：{model_path}")
-    try:
-        logger.info(f"正在加载模型：{model_path}")
-        model = attempt_load(model_path, device='cpu')
-        model.eval()
-        logger.info("模型加载成功")
-        return model
-    except Exception as e:
-        logger.error(f"加载模型时出错：{str(e)}")
-        raise
-
-def get_model():
-    """获取或加载模型实例"""
-    global model
-    if model is None:
-        model = load_model()
-    return model
+#### 3.3 数据查询接口
+```
+GET /detection-history      # 获取检测历史记录
+GET /detection-statistics   # 获取统计信息
+GET /image/<id>            # 获取图片数据
+GET /health                # 系统健康检查
 ```
 
-#### 2.2 模型测试
-```python
-def test_model():
-    """测试模型是否正常工作"""
-    try:
-        # 加载模型
-        model = get_model()
-        logger.info("模型加载成功！")
-        
-        # 创建测试输入
-        dummy_input = torch.zeros((1, 3, 640, 640))
-        
-        # 测试推理
-        with torch.no_grad():
-            result = model(dummy_input)
-        logger.info("模型推理测试成功！")
-        return True
-    except Exception as e:
-        logger.error(f"模型测试失败：{str(e)}")
-        return False
+## 环境配置
+
+### 1. 环境变量配置
+
+创建 `.env` 文件配置数据库连接：
+
+```env
+# MongoDB配置
+MONGODB_USERNAME=your_username
+MONGODB_PASSWORD=your_password
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_DATABASE=yolov5_detection
+
+# Flask配置
+FLASK_HOST=127.0.0.1
+FLASK_PORT=5000
+FLASK_ENV=production
 ```
 
-### 3. 图像处理流程
+### 2. 数据库初始化
 
-#### 3.1 图像上传验证
-```python
-def allowed_file(filename):
-    """检查文件类型是否允许"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-@app.route('/detect', methods=['POST'])
-def detect():
-    """处理图像检测请求"""
-    if 'file' not in request.files:
-        return jsonify({'error': '没有文件上传'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': '没有选择文件'}), 400
-    
-    if not allowed_file(file.filename):
-        return jsonify({'error': '不支持的文件类型'}), 400
-```
-
-#### 3.2 图像预处理
-```python
-# 保存上传的文件
-filename = f"{int(time.time())}_{secure_filename(file.filename)}"
-filepath = UPLOAD_FOLDER / filename
-file.save(str(filepath))
-
-# 图像预处理
-img = Image.open(filepath)
-img = np.array(img)
-img = cv2.resize(img, (640, 640))
-img = torch.from_numpy(img.transpose(2, 0, 1)).float()  # HWC to CHW
-img /= 255.0  # 0 - 255 to 0.0 - 1.0
-if len(img.shape) == 3:
-    img = img.unsqueeze(0)  # 添加batch维度
-```
-
-#### 3.3 目标检测
-```python
-# 推理
-with torch.no_grad():
-    pred = current_model(img)
-    if isinstance(pred, tuple):
-        pred = pred[0]  # 如果返回元组，取第一个元素
-    pred = non_max_suppression(pred, 0.25, 0.45)
-
-# 处理检测结果
-result_data = []
-if len(pred) > 0 and len(pred[0]) > 0:
-    for *xyxy, conf, cls in pred[0]:
-        result_data.append({
-            'class': int(cls),
-            'confidence': float(conf),
-            'bbox': [float(x) for x in xyxy]
-        })
-```
-
-#### 3.4 结果可视化
-```python
-def draw_detections(image_path, detections):
-    """在图像上绘制检测结果"""
-    try:
-        # 读取图像
-        image = cv2.imread(str(image_path))
-        if image is None:
-            raise ValueError(f"无法读取图像：{image_path}")
-            
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        annotator = Annotator(image)
-        
-        # 为每个检测结果绘制边界框和标签
-        for det in detections:
-            bbox = det['bbox']
-            conf = det['confidence']
-            cls = det['class']
-            
-            # 转换坐标为整数
-            x1, y1, x2, y2 = map(int, bbox)
-            
-            # 使用固定的颜色
-            color = (0, 255, 0)  # 使用绿色作为边界框颜色
-            
-            # 绘制边界框和标签
-            label = f'{CLASS_NAMES[cls]} {conf:.2f}'
-            annotator.box_label([x1, y1, x2, y2], label, color=color)
-        
-        # 生成检测后的图片文件名
-        filename = Path(image_path).name
-        detected_filename = f"detected_{filename}"
-        output_path = DETECTED_FOLDER / detected_filename
-        
-        # 保存标注后的图像
-        result_image = cv2.cvtColor(annotator.result(), cv2.COLOR_RGB2BGR)
-        cv2.imwrite(str(output_path), result_image)
-        return detected_filename
-    except Exception as e:
-        logger.error(f"绘制检测结果时出错：{str(e)}")
-        raise
-```
-
-### 4. Web服务
-
-#### 4.1 路由设计
-```python
-@app.route('/')
-def index():
-    """渲染主页"""
-    return render_template('index.html')
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """提供静态文件服务"""
-    return send_from_directory('static', filename)
-
-@app.route('/detect', methods=['POST'])
-def detect():
-    """处理图像检测请求"""
-    # ... 检测代码 ...
-```
-
-#### 4.2 服务器配置
-```python
-if __name__ == '__main__':
-    try:
-        # 测试模型
-        if not test_model():
-            logger.error("模型测试失败，服务不会启动")
-            sys.exit(1)
-        
-        port = 5000
-        host = '127.0.0.1'
-        
-        # 检查端口是否被占用
-        import socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.bind((host, port))
-        except socket.error:
-            logger.warning(f"端口 {port} 已被占用，尝试使用端口 5001")
-            port = 5001
-        finally:
-            sock.close()
-        
-        # 根据环境选择服务器
-        if os.environ.get('FLASK_ENV') == 'development':
-            # 开发环境使用 Flask 开发服务器
-            logger.info(f"启动开发服务器在 http://{host}:{port}")
-            app.run(debug=True, host=host, port=port, threaded=True)
-        else:
-            # 生产环境使用 Waitress 服务器
-            logger.info(f"启动生产服务器在 http://{host}:{port}")
-            serve(app, host=host, port=port, threads=4)
-            
-    except Exception as e:
-        logger.error(f"启动失败：{str(e)}")
-        sys.exit(1)
-```
-
-## 使用说明
-
-1. 安装依赖：
 ```bash
+# 启动MongoDB服务
+# Windows: net start MongoDB
+# Linux/Mac: sudo systemctl start mongod
+
+# 运行数据库初始化脚本
+python database_init.py
+```
+
+## 快速开始
+
+### 1. 安装依赖
+
+```bash
+# 克隆项目
+git clone <repository-url>
+cd yolov5-flask
+
+# 创建虚拟环境（推荐）
+python -m venv venv
+
+# 激活虚拟环境
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# 安装依赖
 pip install -r requirements.txt
 ```
 
-2. 启动服务器：
+### 2. 模型准备
+
 ```bash
-python main.py
+# 创建模型目录
+mkdir model
+
+# 下载或放置YOLOv5模型文件到model目录
+# 例如：fires.pt（火灾检测模型）
 ```
 
-3. 访问应用：
-   - 开发环境：http://127.0.0.1:5000
-   - 如果5000端口被占用，将自动使用5001端口
+### 3. 启动服务
 
-4. 使用流程：
-   - 打开网页
-   - 点击上传图片
-   - 等待检测结果
-   - 查看检测后的图片和详细信息
+```bash
+# 启动应用
+python main.py
+
+# 访问应用
+# 浏览器打开: http://127.0.0.1:5000
+```
+
+## 使用指南
+
+### 1. Web界面操作
+
+#### 1.1 模型选择
+- 在页面顶部选择要使用的检测模型
+- 系统会显示模型状态和支持的检测类别
+- 支持动态切换不同的模型
+
+#### 1.2 图像上传
+- **拖拽上传**：将图片文件拖拽到上传区域
+- **点击上传**：点击上传区域选择文件
+- **支持格式**：PNG、JPG、JPEG、GIF
+- **文件大小**：建议不超过10MB
+
+#### 1.3 检测结果
+- **原始图像**：显示上传的原始图片
+- **检测结果**：显示标注后的图片，包含边界框和标签
+- **检测统计**：显示检测到的目标数量和详细信息
+- **置信度显示**：每个检测目标都会显示置信度分数
+
+### 2. API接口使用
+
+#### 2.1 图像检测API
+```bash
+# 使用curl进行检测
+curl -X POST -F "file=@image.jpg" -F "model=fires.pt" http://127.0.0.1:5000/detect
+```
+
+#### 2.2 模型信息API
+```bash
+# 获取可用模型列表
+curl http://127.0.0.1:5000/models
+
+# 获取当前模型信息
+curl http://127.0.0.1:5000/model-info
+```
+
+#### 2.3 检测历史API
+```bash
+# 获取检测历史
+curl http://127.0.0.1:5000/detection-history?page=1&limit=10
+
+# 获取检测统计
+curl http://127.0.0.1:5000/detection-statistics
+```
 
 ## 注意事项
 
-1. 确保模型文件 `fires.pt` 已放置在 `model` 目录下
-2. 上传图片大小不要超过16MB
-3. 仅支持png、jpg、jpeg格式的图片
-4. 生产环境部署时建议使用反向代理（如Nginx）
+### 系统要求
+- **Python版本**：3.8+
+- **内存要求**：建议至少8GB RAM
+- **存储空间**：至少2GB可用空间
+- **网络连接**：首次运行需要下载依赖
 
-## 系统优化
+### 模型要求
+- **格式支持**：YOLOv5 PyTorch模型（.pt格式）
+- **版本兼容**：确保模型与当前YOLOv5版本兼容
+- **GPU加速**：支持CUDA的NVIDIA GPU可显著提升性能
 
-1. 性能优化
-   - 使用Waitress多线程处理请求
-   - 图片尺寸标准化
-   - 模型单例模式避免重复加载
+### 使用限制
+- **文件大小**：单个图片建议不超过10MB
+- **并发处理**：默认支持4个并发请求
+- **存储清理**：建议定期清理上传和检测结果文件
 
-2. 安全性
-   - 文件类型验证
-   - 文件大小限制
-   - 安全的文件名处理
+## 系统优化建议
 
-3. 可靠性
-   - 完善的错误处理
-   - 详细的日志记录
-   - 服务器自动容错 
+### 性能优化
+- **GPU加速**：安装CUDA版本的PyTorch
+- **模型优化**：使用TensorRT或ONNX优化推理速度
+- **缓存策略**：使用Redis缓存模型信息和检测结果
+- **负载均衡**：生产环境建议使用Nginx + Gunicorn
+
+### 安全加固
+- **文件验证**：严格验证上传文件类型和内容
+- **访问控制**：添加API访问频率限制
+- **数据加密**：生产环境使用HTTPS
+- **定期更新**：及时更新依赖包和安全补丁
+
+### 扩展功能
+- **多模型并行**：支持同时运行多个检测模型
+- **批量处理**：实现图片批量上传和检测
+- **实时检测**：集成摄像头实时检测功能
+- **数据分析**：添加检测数据统计和可视化
+- **用户系统**：实现用户注册、登录和权限管理
+
+## 常见问题
+
+### Q: 模型加载失败怎么办？
+A: 检查模型文件是否存在于 `model/` 目录，确保模型格式为 `.pt` 且与YOLOv5版本兼容。
+
+### Q: 检测速度很慢怎么优化？
+A: 建议安装CUDA版本的PyTorch，使用GPU加速。也可以考虑使用更小的模型或降低输入图像分辨率。
+
+### Q: 数据库连接失败？
+A: 确保MongoDB服务已启动，检查 `.env` 文件中的数据库配置是否正确。
+
+### Q: 如何添加新的检测模型？
+A: 将新模型文件放入 `model/` 目录，重启应用后系统会自动注册新模型。
+
+## 技术支持
+
+如果您在使用过程中遇到问题，可以通过以下方式获取帮助：
+
+1. **查看日志**：检查应用运行日志获取错误信息
+2. **检查配置**：确认环境变量和数据库配置正确
+3. **更新依赖**：尝试更新到最新版本的依赖包
+4. **重启服务**：重启应用和数据库服务
+
+## 贡献指南
+
+欢迎贡献代码和建议！请遵循以下步骤：
+
+1. Fork 本项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+## 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 致谢
+
+- [YOLOv5](https://github.com/ultralytics/yolov5) - 核心检测算法
+- [Flask](https://flask.palletsprojects.com/) - Web框架
+- [MongoDB](https://www.mongodb.com/) - 数据库支持
+- [PyTorch](https://pytorch.org/) - 深度学习框架
