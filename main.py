@@ -620,15 +620,15 @@ def detect():
             detection_id = f"det_{int(time.time())}_{hash(filename) % 10000}"
             
             # 保存检测记录到数据库
-            detection_record_id = db.save_detection_record(
+            db.save_detection_record(
                 detection_id=detection_id,
                 original_image_id=original_image_id,
                 detected_image_id=detected_image_id,
                 model_name=model_name,
                 detection_count=len(result_data),
                 processing_time=processing_time,
-                user_ip=user_ip,
-                user_agent=user_agent
+                user_ip=user_ip or "unknown",
+                user_agent=user_agent or "unknown"
             )
             
             # 保存检测结果详情到数据库
